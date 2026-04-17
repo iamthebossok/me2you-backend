@@ -8,7 +8,7 @@ app.use(cors());
 
 app.use(express.json());
 
-// ✅ Home route
+// 🏠 Home route
 
 app.get("/", (req, res) => {
 
@@ -16,7 +16,7 @@ app.get("/", (req, res) => {
 
 });
 
-// ✅ Health check (used by Render + monitoring)
+// ❤️ Health check
 
 app.get("/health", (req, res) => {
 
@@ -24,11 +24,43 @@ app.get("/health", (req, res) => {
 
 });
 
-// 🚀 Temporary test route (no database yet)
+// 👤 Simple in-memory users system
 
-app.get("/test", (req, res) => {
+let users = [];
 
-  res.json({ success: true, message: "API is working" });
+// ➕ Create user
+
+app.post("/users", (req, res) => {
+
+  const { name, email } = req.body;
+
+  if (!name || !email) {
+
+    return res.status(400).json({ error: "Name and email required" });
+
+  }
+
+  const newUser = {
+
+    id: users.length + 1,
+
+    name,
+
+    email
+
+  };
+
+  users.push(newUser);
+
+  res.json({ success: true, user: newUser });
+
+});
+
+// 📄 Get all users
+
+app.get("/users", (req, res) => {
+
+  res.json(users);
 
 });
 
