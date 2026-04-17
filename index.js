@@ -8,7 +8,7 @@ app.use(cors());
 
 app.use(express.json());
 
-// 🏠 Home route
+// 🏠 Home
 
 app.get("/", (req, res) => {
 
@@ -24,7 +24,7 @@ app.get("/health", (req, res) => {
 
 });
 
-// 👤 Simple in-memory users system
+// 👤 Simple users system (temporary memory)
 
 let users = [];
 
@@ -40,7 +40,7 @@ app.post("/users", (req, res) => {
 
   }
 
-  const newUser = {
+  const user = {
 
     id: users.length + 1,
 
@@ -50,13 +50,13 @@ app.post("/users", (req, res) => {
 
   };
 
-  users.push(newUser);
+  users.push(user);
 
-  res.json({ success: true, user: newUser });
+  res.json({ success: true, user });
 
 });
 
-// 📄 Get all users
+// 📄 Get users
 
 app.get("/users", (req, res) => {
 
@@ -71,3 +71,4 @@ app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
 
 });
+Clean backend + users system
