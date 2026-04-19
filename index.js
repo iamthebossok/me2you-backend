@@ -96,16 +96,20 @@ app.post("/create-checkout-session", async (req, res) => {
 
     });
 
-    res.json({ url: session.url });
+    // 🔥 IMPORTANT FIX
 
-  } catch (err) {
+    return res.json({ url: session.url });
 
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+
+    console.log(error);
+
+    return res.status(500).json({
+
+      error: error.message
+
+    });
 
   }
 
 });
-
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => console.log("LIVE"));
