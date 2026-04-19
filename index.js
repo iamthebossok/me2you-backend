@@ -10,7 +10,11 @@ app.use(cors());
 
 app.use(express.json());
 
-// 🟢 FRONTEND PAGE
+// =======================
+
+// 🟢 HOME PAGE (FRONTEND)
+
+// =======================
 
 app.get("/", (req, res) => {
 
@@ -18,11 +22,19 @@ app.get("/", (req, res) => {
 
     <html>
 
-      <body style="text-align:center;font-family:Arial;padding:60px;background:#111;color:white;">
+      <head>
+
+        <title>Me2You App</title>
+
+      </head>
+
+      <body style="text-align:center;font-family:Arial;background:#111;color:white;padding:60px;">
 
         <h1>Me2You App 🚀</h1>
 
-        <button onclick="buy()" style="padding:15px 30px;font-size:18px;">
+        <p>Unlock access for £5</p>
+
+        <button onclick="buy()" style="padding:15px 30px;font-size:18px;cursor:pointer;">
 
           Buy Now £5
 
@@ -32,15 +44,33 @@ app.get("/", (req, res) => {
 
           async function buy() {
 
-            const res = await fetch("/create-checkout-session", {
+            try {
 
-              method: "POST"
+              const res = await fetch("/create-checkout-session", {
 
-            });
+                method: "POST"
 
-            const data = await res.json();
+              });
 
-            window.location.href = data.url;
+              const data = await res.json();
+
+              if (data.url) {
+
+                window.location.href = data.url;
+
+              } else {
+
+                alert("Payment error: no checkout URL returned");
+
+              }
+
+            } catch (err) {
+
+              alert("Request failed");
+
+              console.error(err);
+
+            }
 
           }
 
@@ -54,7 +84,11 @@ app.get("/", (req, res) => {
 
 });
 
-// 🟢 STRIPE ROUTE (THIS FIXES YOUR ERROR)
+// =======================
+
+// 🟢 STRIPE CHECKOUT
+
+// =======================
 
 app.post("/create-checkout-session", async (req, res) => {
 
@@ -76,7 +110,7 @@ app.post("/create-checkout-session", async (req, res) => {
 
             product_data: {
 
-              name: "Me2You Access"
+              name: "Me2You App Access"
 
             },
 
@@ -96,20 +130,28 @@ app.post("/create-checkout-session", async (req, res) => {
 
     });
 
-    // 🔥 IMPORTANT FIX
-
     return res.json({ url: session.url });
 
   } catch (error) {
 
-    console.log(error);
+    console.error("Stripe Error:", error.message);
 
-    return res.status(500).json({
-
-      error: error.message
-
-    });
+    return res.status(500).json({ error: error.message });
 
   }
+
+});
+
+// =======================
+
+// 🟢 START SERVER (RENDER FIX)
+
+// =======================
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+
+  console.log("Me2You running on port " + PORT);
 
 });
