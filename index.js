@@ -2,7 +2,9 @@ const express = require("express");
 
 const cors = require("cors");
 
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+// Stripe safe init (prevents Render crash)
+
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY || "missing_key");
 
 const app = express();
 
@@ -10,11 +12,23 @@ app.use(cors());
 
 app.use(express.json());
 
-// =======================
+/* =========================
 
-// 🟢 HOME PAGE (FRONTEND)
+   🟢 HEALTH CHECK (IMPORTANT)
 
-// =======================
+========================= */
+
+app.get("/health", (req, res) => {
+
+  res.json({ status: "ok", message: "Me2You backend running" });
+
+});
+
+/* =========================
+
+   🟢 FRONTEND PAGE
+
+========================= */
 
 app.get("/", (req, res) => {
 
@@ -60,13 +74,13 @@ app.get("/", (req, res) => {
 
               } else {
 
-                alert("Payment error: no checkout URL returned");
+                alert("Payment failed: no URL returned");
 
               }
 
             } catch (err) {
 
-              alert("Request failed");
+              alert("Server error");
 
               console.error(err);
 
@@ -84,15 +98,27 @@ app.get("/", (req, res) => {
 
 });
 
-// =======================
+/* =========================
 
-// 🟢 STRIPE CHECKOUT
+   🟢 STRIPE CHECKOUT ROUTE
 
-// =======================
+========================= */
 
 app.post("/create-checkout-session", async (req, res) => {
 
   try {
+
+    // Safety check
+
+    if (!process.env.STRIPE_SECRET_KEY) {
+
+      return res.status(500).json({
+
+        error: "Stripe key missing in environment variables"
+
+      });
+
+    }
 
     const session = await stripe.checkout.sessions.create({
 
@@ -110,7 +136,7 @@ app.post("/create-checkout-session", async (req, res) => {
 
             product_data: {
 
-              name: "Me2You App Access"
+              name: "Me2You Access"
 
             },
 
@@ -134,24 +160,28 @@ app.post("/create-checkout-session", async (req, res) => {
 
   } catch (error) {
 
-    console.error("Stripe Error:", error.message);
+    console.log("Stripe Error:", error.message);
 
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({
+
+      error: error.message
+
+    });
 
   }
 
 });
 
-// =======================
+/* =========================
 
-// 🟢 START SERVER (RENDER FIX)
+   🟢 START SERVER (RENDER SAFE)
 
-// =======================
+========================= */
 
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
 
-  console.log("Me2You running on port " + PORT);
+  console.log("🚀 Me2You running on port " + PORT);
 
 });
