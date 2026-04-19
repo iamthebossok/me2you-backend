@@ -2,9 +2,7 @@ const express = require("express");
 
 const cors = require("cors");
 
-// Stripe safe init (prevents Render crash)
-
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY || "missing_key");
+const Stripe = require("stripe");
 
 const app = express();
 
@@ -12,23 +10,49 @@ app.use(cors());
 
 app.use(express.json());
 
-/* =========================
+// ===============================
 
-   🟢 HEALTH CHECK (IMPORTANT)
+// CONFIG
 
-========================= */
+// ===============================
+
+const PORT = process.env.PORT || 3000;
+
+// Safe Stripe init (prevents Render crash)
+
+const stripe = process.env.STRIPE_SECRET_KEY
+
+  ? Stripe(process.env.STRIPE_SECRET_KEY)
+
+  : null;
+
+// ===============================
+
+// HEALTH CHECK (Render uses this mentally)
+
+// ===============================
 
 app.get("/health", (req, res) => {
 
-  res.json({ status: "ok", message: "Me2You backend running" });
+  res.json({
+
+    status: "LIVE",
+
+    app: "TheScripto",
+
+    price: "£1.95",
+
+    stripeReady: !!stripe
+
+  });
 
 });
 
-/* =========================
+// ===============================
 
-   🟢 FRONTEND PAGE
+// FRONTEND PAGE
 
-========================= */
+// ===============================
 
 app.get("/", (req, res) => {
 
@@ -38,19 +62,19 @@ app.get("/", (req, res) => {
 
       <head>
 
-        <title>Me2You App</title>
+        <title>TheScripto</title>
 
       </head>
 
-      <body style="text-align:center;font-family:Arial;background:#111;color:white;padding:60px;">
+      <body style="background:#111;color:white;font-family:Arial;text-align:center;padding:60px;">
 
-        <h1>Me2You App 🚀</h1>
+        <h1>TheScripto 🚀</h1>
 
-        <p>Unlock access for £5</p>
+        <p>Unlock full access for £1.95</p>
 
         <button onclick="buy()" style="padding:15px 30px;font-size:18px;cursor:pointer;">
 
-          Buy Now £5
+          Buy Now £1.95
 
         </button>
 
@@ -74,7 +98,7 @@ app.get("/", (req, res) => {
 
               } else {
 
-                alert("Payment failed: no URL returned");
+                alert("Checkout failed");
 
               }
 
@@ -98,23 +122,21 @@ app.get("/", (req, res) => {
 
 });
 
-/* =========================
+// ===============================
 
-   🟢 STRIPE CHECKOUT ROUTE
+// STRIPE CHECKOUT
 
-========================= */
+// ===============================
 
 app.post("/create-checkout-session", async (req, res) => {
 
   try {
 
-    // Safety check
-
-    if (!process.env.STRIPE_SECRET_KEY) {
+    if (!stripe) {
 
       return res.status(500).json({
 
-        error: "Stripe key missing in environment variables"
+        error: "Stripe is not configured on server"
 
       });
 
@@ -122,9 +144,9 @@ app.post("/create-checkout-session", async (req, res) => {
 
     const session = await stripe.checkout.sessions.create({
 
-      payment_method_types: ["card"],
-
       mode: "payment",
+
+      payment_method_types: ["card"],
 
       line_items: [
 
@@ -136,11 +158,11 @@ app.post("/create-checkout-session", async (req, res) => {
 
             product_data: {
 
-              name: "Me2You Access"
+              name: "TheScripto Access"
 
             },
 
-            unit_amount: 500
+            unit_amount: 195
 
           },
 
@@ -156,15 +178,15 @@ app.post("/create-checkout-session", async (req, res) => {
 
     });
 
-    return res.json({ url: session.url });
+    res.json({ url: session.url });
 
-  } catch (error) {
+  } catch (err) {
 
-    console.log("Stripe Error:", error.message);
+    console.log("Stripe error:", err.message);
 
-    return res.status(500).json({
+    res.status(500).json({
 
-      error: error.message
+      error: err.message
 
     });
 
@@ -172,16 +194,14 @@ app.post("/create-checkout-session", async (req, res) => {
 
 });
 
-/* =========================
+// ===============================
 
-   🟢 START SERVER (RENDER SAFE)
+// START SERVER (RENDER SAFE)
 
-========================= */
-
-const PORT = process.env.PORT || 3000;
+// ===============================
 
 app.listen(PORT, () => {
 
-  console.log("🚀 Me2You running on port " + PORT);
+  console.log("🚀 TheScripto running on port " + PORT);
 
 });
