@@ -1,7 +1,5 @@
 const express = require("express");
 
-const Stripe = require("stripe");
-
 const sqlite3 = require("sqlite3").verbose();
 
 const bcrypt = require("bcryptjs");
@@ -12,13 +10,11 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY || "");
-
-const JWT_SECRET = process.env.JWT_SECRET || "change_me";
+const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
 
 app.use(express.json());
 
-// ================= DATABASE =================
+// ================= DB =================
 
 const db = new sqlite3.Database("./thescripto.db");
 
@@ -86,17 +82,9 @@ app.get("/", (req, res) => {
 
   res.send(`
 
-    <html>
+    <h1>TheScripto</h1>
 
-      <body style="font-family:Arial;text-align:center;padding:40px">
-
-        <h1>TheScripto</h1>
-
-        <p>LIVE BACKEND ACTIVE</p>
-
-      </body>
-
-    </html>
+    <p>Server is running ✅</p>
 
   `);
 
@@ -154,7 +142,7 @@ app.post("/api/login", (req, res) => {
 
 });
 
-// ================= GET POSTS =================
+// ================= POSTS =================
 
 app.get("/api/posts", (req, res) => {
 
@@ -170,100 +158,22 @@ app.get("/api/posts", (req, res) => {
 
 app.post("/api/post", auth, (req, res) => {
 
-  db.get(
+  db.run(
 
-    "SELECT balance FROM credits WHERE userId=?",
+    "INSERT INTO posts (userId,content,score) VALUES (?,?,?)",
 
-    [req.user.id],
-
-    (err, row) => {
-
-      if (!row || row.balance <= 0) {
-
-        return res.status(403).send("No credits");
-
-      }
-
-      db.run(
-
-        "INSERT INTO posts (userId,content,score) VALUES (?,?,?)",
-
-        [req.user.id, req.body.content, req.body.score || 5]
-
-      );
-
-      db.run(
-
-        "UPDATE credits SET balance = balance - 1 WHERE userId=?",
-
-        [req.user.id]
-
-      );
-
-      res.json({ ok: true });
-
-    }
+    [req.user.id, req.body.content, req.body.score || 5]
 
   );
 
-});
-
-// ================= STRIPE PAYMENT (50p CREDIT) =================
-
-app.post("/api/pay", auth, async (req, res) => {
-
-  try {
-
-    const session = await stripe.checkout.sessions.create({
-
-      payment_method_types: ["card"],
-
-      mode: "payment",
-
-      line_items: [
-
-        {
-
-          price_data: {
-
-            currency: "gbp",
-
-            product_data: {
-
-              name: "TheScripto Post Credit"
-
-            },
-
-            unit_amount: 50
-
-          },
-
-          quantity: 1
-
-        }
-
-      ],
-
-      success_url: "https://example.com/success",
-
-      cancel_url: "https://example.com/cancel"
-
-    });
-
-    res.json({ url: session.url });
-
-  } catch (e) {
-
-    res.status(500).send("Stripe error");
-
-  }
+  res.json({ ok: true });
 
 });
 
-// ================= START SERVER =================
+// ================= START =================
 
 app.listen(PORT, () => {
 
-  console.log("TheScripto LIVE on port " + PORT);
+  console.log("TheScripto running on port " + PORT);
 
 });
