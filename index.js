@@ -72,12 +72,30 @@ app.get("/", (req, res) => {
 
         <p>Unlock full access for £1.95</p>
 
-        <button onclick="buy()" style="padding:15px 30px;font-size:18px;cursor:pointer;">
+        <button onclick="payThenPost()">Pay & Post (£0.50)</button>
 
           Buy Now £1.95
 
         </button>
+async function payThenPost() {
 
+  let res = await fetch('/api/create-payment', {
+
+    method: 'POST',
+
+    headers: {
+
+      'Authorization': token
+
+    }
+
+  });
+
+  let data = await res.json();
+
+  window.location = data.url;
+
+}
         <script>
 
           async function buy() {
