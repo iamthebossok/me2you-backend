@@ -80,7 +80,7 @@ function auth(req, res, next) {
 
 }
 
-// ================= HOME PAGE =================
+// ================= HOME =================
 
 app.get("/", (req, res) => {
 
@@ -92,13 +92,7 @@ app.get("/", (req, res) => {
 
         <h1>TheScripto</h1>
 
-        <p>Human Experience Review Platform</p>
-
-        <h3>API Status: LIVE</h3>
-
-        <p>Try:</p>
-
-        <code>/api/posts</code>
+        <p>LIVE BACKEND ACTIVE</p>
 
       </body>
 
@@ -160,23 +154,15 @@ app.post("/api/login", (req, res) => {
 
 });
 
-// ================= POSTS (FEED) =================
+// ================= GET POSTS =================
 
 app.get("/api/posts", (req, res) => {
 
-  db.all(
+  db.all("SELECT * FROM posts ORDER BY createdAt DESC", [], (err, rows) => {
 
-    "SELECT * FROM posts ORDER BY createdAt DESC",
+    res.json(rows || []);
 
-    [],
-
-    (err, rows) => {
-
-      res.json(rows || []);
-
-    }
-
-  );
+  });
 
 });
 
@@ -184,21 +170,45 @@ app.get("/api/posts", (req, res) => {
 
 app.post("/api/post", auth, (req, res) => {
 
-  const { content, score } = req.body;
+  db.get(
 
-  db.run(
+    "SELECT balance FROM credits WHERE userId=?",
 
-    "INSERT INTO posts (userId,content,score) VALUES (?,?,?)",
+    [req.user.id],
 
-    [req.user.id, content, score || 5]
+    (err, row) => {
+
+      if (!row || row.balance <= 0) {
+
+        return res.status(403).send("No credits");
+
+      }
+
+      db.run(
+
+        "INSERT INTO posts (userId,content,score) VALUES (?,?,?)",
+
+        [req.user.id, req.body.content, req.body.score || 5]
+
+      );
+
+      db.run(
+
+        "UPDATE credits SET balance = balance - 1 WHERE userId=?",
+
+        [req.user.id]
+
+      );
+
+      res.json({ ok: true });
+
+    }
 
   );
 
-  res.json({ ok: true });
-
 });
 
-// ================= STRIPE PAYMENT =================
+// ================= STRIPE PAYMENT (50p CREDIT) =================
 
 app.post("/api/pay", auth, async (req, res) => {
 
@@ -220,7 +230,7 @@ app.post("/api/pay", auth, async (req, res) => {
 
             product_data: {
 
-              name: "TheScripto Post (£0.50)"
+              name: "TheScripto Post Credit"
 
             },
 
@@ -254,6 +264,6 @@ app.post("/api/pay", auth, async (req, res) => {
 
 app.listen(PORT, () => {
 
-  console.log("🚀 TheScripto running on port " + PORT);
+  console.log("TheScripto LIVE on port " + PORT);
 
 });
