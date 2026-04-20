@@ -10,11 +10,11 @@ const jwt = require("jsonwebtoken");
 
 const app = express();
 
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
-
 const PORT = process.env.PORT || 3000;
 
-const JWT_SECRET = process.env.JWT_SECRET || "CHANGE_ME";
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY || "");
+
+const JWT_SECRET = process.env.JWT_SECRET || "change_me";
 
 app.use(express.json());
 
@@ -52,17 +52,7 @@ db.serialize(() => {
 
     userId INTEGER,
 
-    balance INTEGER DEFAULT 0
-
-  )`);
-
-  db.run(`CREATE TABLE IF NOT EXISTS referrals (
-
-    id INTEGER PRIMARY KEY,
-
-    referrerId INTEGER,
-
-    referredId INTEGER
+    balance INTEGER DEFAULT 1
 
   )`);
 
@@ -90,6 +80,34 @@ function auth(req, res, next) {
 
 }
 
+// ================= HOME PAGE =================
+
+app.get("/", (req, res) => {
+
+  res.send(`
+
+    <html>
+
+      <body style="font-family:Arial;text-align:center;padding:40px">
+
+        <h1>TheScripto</h1>
+
+        <p>Human Experience Review Platform</p>
+
+        <h3>API Status: LIVE</h3>
+
+        <p>Try:</p>
+
+        <code>/api/posts</code>
+
+      </body>
+
+    </html>
+
+  `);
+
+});
+
 // ================= REGISTER =================
 
 app.post("/api/register", async (req, res) => {
@@ -103,8 +121,6 @@ app.post("/api/register", async (req, res) => {
     [req.body.username, hash],
 
     function () {
-
-      // give starter credit
 
       db.run("INSERT INTO credits (userId,balance) VALUES (?,1)", [this.lastID]);
 
@@ -144,97 +160,7 @@ app.post("/api/login", (req, res) => {
 
 });
 
-// ================= STRIPE PAYMENT (£0.50 POST) =================
-
-app.post("/api/pay", auth, async (req, res) => {
-
-  const session = await stripe.checkout.sessions.create({
-
-    payment_method_types: ["card"],
-
-    mode: "payment",
-
-    line_items: [{
-
-      price_data: {
-
-        currency: "gbp",
-
-        product_data: {
-
-          name: "TheScripto Experience Post"
-
-        },
-
-        unit_amount: 50
-
-      },
-
-      quantity: 1
-
-    }],
-
-    metadata: {
-
-      userId: req.user.id
-
-    },
-
-    success_url: "https://yourdomain.com/success",
-
-    cancel_url: "https://yourdomain.com/cancel"
-
-  });
-
-  res.json({ url: session.url });
-
-});
-
-// ================= CREATE EXPERIENCE =================
-
-app.post("/api/post", auth, (req, res) => {
-
-  const { content, score } = req.body;
-
-  db.get(
-
-    "SELECT balance FROM credits WHERE userId=?",
-
-    [req.user.id],
-
-    (err, row) => {
-
-      if (!row || row.balance <= 0) {
-
-        return res.status(403).send("No credits");
-
-      }
-
-      db.run(
-
-        "INSERT INTO posts (userId,content,score) VALUES (?,?,?)",
-
-        [req.user.id, content, score || 5]
-
-      );
-
-      db.run(
-
-        "UPDATE credits SET balance = balance - 1 WHERE userId=?",
-
-        [req.user.id]
-
-      );
-
-      res.json({ ok: true });
-
-    }
-
-  );
-
-});
-
-// ================= GET FEED =================
+// ================= POSTS (FEED) =================
 
 app.get("/api/posts", (req, res) => {
 
@@ -246,7 +172,7 @@ app.get("/api/posts", (req, res) => {
 
     (err, rows) => {
 
-      res.json(rows);
+      res.json(rows || []);
 
     }
 
@@ -254,25 +180,17 @@ app.get("/api/posts", (req, res) => {
 
 });
 
-// ================= REFERRAL =================
+// ================= CREATE POST =================
 
-app.post("/api/referral", auth, (req, res) => {
+app.post("/api/post", auth, (req, res) => {
 
-  const { referredUserId } = req.body;
-
-  db.run(
-
-    "INSERT INTO referrals (referrerId,referredId) VALUES (?,?)",
-
-    [req.user.id, referredUserId]
-
-  );
+  const { content, score } = req.body;
 
   db.run(
 
-    "UPDATE credits SET balance = balance + 1 WHERE userId=?",
+    "INSERT INTO posts (userId,content,score) VALUES (?,?,?)",
 
-    [req.user.id]
+    [req.user.id, content, score || 5]
 
   );
 
@@ -280,10 +198,62 @@ app.post("/api/referral", auth, (req, res) => {
 
 });
 
-// ================= START =================
+// ================= STRIPE PAYMENT =================
+
+app.post("/api/pay", auth, async (req, res) => {
+
+  try {
+
+    const session = await stripe.checkout.sessions.create({
+
+      payment_method_types: ["card"],
+
+      mode: "payment",
+
+      line_items: [
+
+        {
+
+          price_data: {
+
+            currency: "gbp",
+
+            product_data: {
+
+              name: "TheScripto Post (£0.50)"
+
+            },
+
+            unit_amount: 50
+
+          },
+
+          quantity: 1
+
+        }
+
+      ],
+
+      success_url: "https://example.com/success",
+
+      cancel_url: "https://example.com/cancel"
+
+    });
+
+    res.json({ url: session.url });
+
+  } catch (e) {
+
+    res.status(500).send("Stripe error");
+
+  }
+
+});
+
+// ================= START SERVER =================
 
 app.listen(PORT, () => {
 
-  console.log("🚀 TheScripto LIVE");
+  console.log("🚀 TheScripto running on port " + PORT);
 
 });
